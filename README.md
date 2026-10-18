@@ -21,6 +21,7 @@ hijacks/parked domains/broken links; key pages match `baseline.json`; no secrets
 If a content change is intentional: `python3 check.py --update-baseline` and commit `baseline.json`.
 
 ## Daily SEO check (disabled)
-`scripts/seo_check.py` + `.github/workflows/seo-daily.yml.disabled` (daily 11:17 UTC; stdlib only, no secrets).
-Pre-launch: `EXPECT_NOINDEX=1` (default) expects noindex on every page. At launch: rename the workflow, set repo variables `SITE_URL=https://agaveahead.com` and `EXPECT_NOINDEX=0`.
-Local: `EXPECT_NOINDEX=1 python3 scripts/seo_check.py http://localhost:8091 --skip-http --warn-only`.
+`scripts/seo_check.py` (ported from johngee518/setaside-safety-check) + `.github/workflows/seo-daily.yml.disabled` (daily 12:17 UTC; stdlib only, no secrets; opens/closes an "SEO alert" issue).
+Polite by design: same User-Agent and request shape as `check.py`, one request at a time ~1.5 s apart (`SEO_DELAY`), and the run stops at the first HTTP 403 instead of retrying.
+Pre-launch: `EXPECT_NOINDEX=1` (default) requires noindex and robots `Disallow: /`. Real 404s are checked at `/`, `/es/` and `/ja/` (`SEO_LANG_PREFIXES`).
+At launch: rename the workflow, set repo variables `SITE_URL=https://agaveahead.com` and `EXPECT_NOINDEX=0`, and re-enable repo Actions.

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Daily technical SEO check (stdlib only). Shared seo-check template; Agave Ahead edit: EXPECT_NOINDEX=1 pre-launch mode.
+"""Daily technical SEO check (stdlib only). Ported from johngee518/setaside-safety-check (b3561e2) for Agave Ahead.
+Agave Ahead edits: identical UA to check.py; one request at a time with a ~1.5 s gap; stop at the first 403
+(Cloudflare challenge: report it, never retry harder); EXPECT_NOINDEX=1 pre-launch mode; real 404 checked per language.
 
 Usage:
   python3 seo_check.py https://example.com [--max-pages 25] [--json report.json]
@@ -18,7 +20,14 @@ import urllib.request, urllib.error, urllib.parse
 from html.parser import HTMLParser
 import xml.etree.ElementTree as ET
 
-UA = "Mozilla/5.0 (compatible; SEOCheckBot/1.0; +https://github.com/johngee518)"
+UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36 AgaveAhead-safety-check"  # identical to check.py (config.json user_agent)
+DELAY = float(os.environ.get("SEO_DELAY", "1.5"))  # polite: one page at a time, ~1.5 s apart
+EXPECT_NOINDEX = os.environ.get("EXPECT_NOINDEX") == "1"  # pre-launch: noindex + robots Disallow: / are REQUIRED
+_last = [0.0]
+
+
+class Blocked(Exception):
+    """First 403 seen: stop the whole run (likely a bot challenge), do not hammer the site."""
 CTX = ssl.create_default_context()
 
 
@@ -31,9 +40,13 @@ def fetch(url, timeout=15, follow=True, method="GET"):
     """Return dict(status, url, headers, body, error, redirects)."""
     redirects = []
     cur = url
-    opener = urllib.request.build_opener(NoRedirect, urllib.request.HTTPSHandler(context=CTX))
+    opener = urllib.request.build_opener(NoRedirect)  # default HTTPS context (same TLS/ALPN as safety_check.py; a custom context got Cloudflare-challenged)
     for _ in range(10):
-        req = urllib.request.Request(cur, method=method, headers={"User-Agent": UA, "Accept-Encoding": "gzip"})
+        wait = DELAY - (time.time() - _last[0])
+        if wait > 0:
+            time.sleep(wait)
+        _last[0] = time.time()
+        req = urllib.request.Request(cur, method=method, headers={"User-Agent": UA})  # same request shape as safety_check.py
         try:
             r = opener.open(req, timeout=timeout)
             status, headers, body = r.status, r.headers, r.read()
@@ -45,6 +58,8 @@ def fetch(url, timeout=15, follow=True, method="GET"):
                 body = b""
         except Exception as e:
             return {"status": None, "url": cur, "headers": {}, "body": "", "error": str(e), "redirects": redirects}
+        if status == 403:
+            raise Blocked(cur)
         if headers.get("Content-Encoding") == "gzip" and body:
             try:
                 body = gzip.decompress(body)
@@ -190,10 +205,11 @@ def check_page(url, base_host, rep, timeout, all_titles, all_descs, link_targets
     info = {"url": url, "bytes": r.get("bytes", 0), "scripts": p.scripts, "styles": p.styles}
     # robots meta / header
     robots = (p.meta("robots") or "") + " " + (p.meta("googlebot") or "") + " " + str(r["headers"].get("X-Robots-Tag", ""))
-    # Agave Ahead: before launch every page MUST be noindex (EXPECT_NOINDEX=1); after launch noindex is a FAIL again.
-    if os.environ.get("EXPECT_NOINDEX") == "1":
-        if "noindex" in robots.lower(): rep.ok(path, "noindex present (expected before launch)")
-        else: rep.fail(path, "noindex missing but EXPECT_NOINDEX=1 (pre-launch pages must stay out of search)")
+    if EXPECT_NOINDEX:
+        if "noindex" in robots.lower():
+            rep.ok(path, "noindex present (expected before launch)")
+        else:
+            rep.fail(path, "noindex missing but EXPECT_NOINDEX=1 (pre-launch pages must stay out of search)")
     elif "noindex" in robots.lower():
         rep.fail(path, "page is set to noindex (meta robots or X-Robots-Tag)")
     # title
@@ -315,6 +331,8 @@ def main():
     home = fetch(base + "/", a.timeout)
     if home["status"] != 200:
         print(f"ERROR: homepage {base}/ returned {home['status'] or home['error']}")
+        _h = home.get('headers') or {}
+        print(f"  server={_h.get('server')} cf-mitigated={_h.get('cf-mitigated')} cf-ray={_h.get('cf-ray')}")
         return 2
     final = urllib.parse.urlparse(home["url"])
     host = final.netloc
@@ -325,9 +343,11 @@ def main():
 
     # host variants
     bare = host[4:] if host.startswith("www.") else host
-    variants = [f"https://{bare}/", f"https://www.{bare}/"]
+    # *.pages.dev has no www host of its own (and Agave Ahead uses no www/domain redirects), so only the bare host is checked there.
+    no_www = bare.endswith(".pages.dev") or os.environ.get("SEO_NO_WWW") == "1"
+    variants = [f"https://{bare}/"] + ([] if no_www else [f"https://www.{bare}/"])
     if not a.skip_http:
-        variants += [f"http://{bare}/", f"http://www.{bare}/"]
+        variants += [f"http://{bare}/"] + ([] if no_www else [f"http://www.{bare}/"])
     for v in variants:
         r = fetch(v, a.timeout)
         hops = len(r["redirects"])
@@ -356,7 +376,7 @@ def main():
             elif line.lower().startswith("disallow:") and cur_ua in ("*", "Googlebot"):
                 val = line.split(":", 1)[1].strip()
                 if val == "/":
-                    rep.fail("robots.txt", f"Disallow: / for {cur_ua} blocks the whole site")
+                    (rep.ok if EXPECT_NOINDEX else rep.fail)("robots.txt", f"Disallow: / for {cur_ua} blocks the whole site" + (" (expected before launch)" if EXPECT_NOINDEX else ""))
                 elif val:
                     blocks.append(val)
         if blocks:
@@ -421,9 +441,12 @@ def main():
     for t, s in broken:
         rep.fail("links", f"broken internal link {t} -> {s}")
     # 404
-    r = fetch(f"https://{host}/this-page-should-not-exist-{int(time.time())}/", a.timeout)
-    if r["status"] != 404:
-        rep.fail("site", f"missing page returns HTTP {r['status']} instead of 404 (soft 404)")
+    for pre in [""] + [f"/{c}" for c in os.environ.get("SEO_LANG_PREFIXES", "es,ja").split(",") if c]:
+        r = fetch(f"https://{host}{pre}/this-page-should-not-exist-{int(time.time())}/", a.timeout)
+        if r["status"] != 404:
+            rep.fail("site", f"missing page {pre or '/'}… returns HTTP {r['status']} instead of 404 (soft 404)")
+        else:
+            rep.ok("site", f"missing page under {pre or '/'} returns a real 404")
     # GSC
     if any(p.get("gsc_meta") for p in pages):
         rep.ok("site", "google-site-verification meta present")
@@ -447,4 +470,9 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Blocked as b:
+        print(f"SEO check STOPPED: HTTP 403 at {b} (bot challenge?). Not retrying.")
+        print("SUMMARY: 1 fail, 0 warn")
+        sys.exit(1)

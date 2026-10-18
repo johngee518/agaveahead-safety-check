@@ -1,14 +1,16 @@
-# Daily technical SEO check for Agave Ahead (shared seo-check template).
-# DISABLED until launch is approved (same method as safety-check: the .disabled suffix means GitHub doesn't load it).
-# Enable: rename to seo-daily.yml. Pre-launch the site is noindex on purpose, so EXPECT_NOINDEX=1 makes noindex a PASS
-# (and its absence a FAIL). At launch set EXPECT_NOINDEX to "0" (or repo variable) and SITE_URL to https://agaveahead.com.
+# Daily technical SEO check for Agave Ahead (ported from johngee518/setaside-safety-check).
+# DISABLED until launch (same method as safety-check: the .disabled suffix means GitHub doesn't load it; repo Actions are also off).
+# Enable at launch: rename to seo-daily.yml, set repo variables SITE_URL=https://agaveahead.com and EXPECT_NOINDEX=0.
+# Pre-launch (EXPECT_NOINDEX=1, default) noindex + robots "Disallow: /" are required instead of flagged.
 name: seo-daily
 on:
   schedule:
-    - cron: "17 11 * * *"   # daily 11:17 UTC
+    - cron: "17 12 * * *"   # daily 12:17 UTC
   workflow_dispatch: {}
 permissions:
   contents: read
+  issues: write
+concurrency: { group: seo-daily, cancel-in-progress: false }
 jobs:
   seo:
     runs-on: ubuntu-latest
@@ -18,11 +20,12 @@ jobs:
       EXPECT_NOINDEX: ${{ vars.EXPECT_NOINDEX || '1' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      # System python3 (like safety-check.yml); the setup-python toolcache build got Cloudflare-challenged on SetAside.
       - name: Run SEO check
+        id: seo
+        continue-on-error: true
         run: |
+          set -o pipefail
           python3 scripts/seo_check.py "$SITE_URL" --max-pages 25 --max-links 150 \
             --json seo-report.json | tee seo-report.txt
       - name: Job summary
@@ -37,3 +40,19 @@ jobs:
             seo-report.txt
             seo-report.json
           retention-days: 14
+      - name: Open/update or close SEO alert issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FAILED: ${{ steps.seo.outcome == 'failure' }}
+        run: |
+          [ -s seo-report.txt ] || echo "SEO check crashed before writing a report" > seo-report.txt
+          { echo "## SEO check $(date -u '+%Y-%m-%d %H:%M UTC') for $SITE_URL"; echo; grep -E '^\s*\[FAIL\]' seo-report.txt || true; echo; echo '<details><summary>Full report</summary>'; echo; echo '```'; cat seo-report.txt; echo '```'; echo '</details>'; echo; echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"; } > seo-issue.md
+          gh label create safety-alert --color B60205 --description "Automated safety checker failure" 2>/dev/null || true
+          gh label create seo --color 1D76DB --description "Daily SEO check" 2>/dev/null || true
+          num=$(gh issue list --label seo --state open --json number -q '.[0].number')
+          if [ "$FAILED" = "true" ]; then
+            if [ -n "$num" ]; then gh issue comment "$num" --body-file seo-issue.md
+            else gh issue create --title "SEO alert: Agave Ahead" --label safety-alert --label seo --body-file seo-issue.md; fi
+            exit 1
+          elif [ -n "$num" ]; then gh issue close "$num" --comment "SEO check passing again ($(tail -2 seo-report.txt | head -1))."; fi
