@@ -1,0 +1,50 @@
+name: Agave Ahead safety check
+# DISABLED until launch is approved. Enable: rename to safety-check.yml in the site's own PUBLIC checker repo.
+# Public repo => GitHub Actions minutes are free and unlimited, so hourly is $0. No secrets needed.
+# Hourly quick run at :17; the 13:17 UTC run (~8:17 AM Central) is the daily full run (every sitemap page + every outbound link).
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "quick or full (full also checks every sitemap page and outbound link)"
+        default: full
+        type: choice
+        options: [quick, full]
+permissions:
+  contents: read
+concurrency:
+  group: safety-check
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GITLEAKS_VERSION: "8.21.2"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history, so gitleaks can prove this public repo never held a secret
+      - name: Cache gitleaks binary
+        id: glcache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin/gitleaks
+          key: gitleaks-${{ env.GITLEAKS_VERSION }}
+      - name: Install gitleaks (free binary, no license needed)
+        if: steps.glcache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.local/bin
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz | tar xz -C ~/.local/bin gitleaks
+      - name: Add gitleaks to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Gitleaks (this checker repo's history)
+        run: gitleaks git . --no-banner --redact --config .gitleaks.toml
+      - name: Live site checks (also runs gitleaks on the downloaded published files)
+        if: always()
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then MODE="${{ inputs.mode }}";
+          elif [ "$(date -u +%H)" = "13" ]; then MODE=full; else MODE=quick; fi
+          python3 check.py "$MODE"

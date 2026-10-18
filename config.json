@@ -1,0 +1,176 @@
+{
+  "_comment": "All settings for the public checker repo. No secrets live here. SITE_URL env var overrides site_url (e.g. local preview).",
+  "site_name": "Agave Ahead",
+  "site_url": "https://agaveahead.pages.dev",
+  "site_hosts": [
+    "agaveahead.pages.dev",
+    "agaveahead.com",
+    "www.agaveahead.com"
+  ],
+  "ssl_hosts": [],
+  "safe_browsing_hosts": [],
+  "key_pages": [
+    "/",
+    "/issues/",
+    "/issues/2026-10-11/",
+    "/blog/",
+    "/how-it-works/",
+    "/about/",
+    "/privacy/",
+    "/terms/",
+    "/disclosure/",
+    "/subscribe/",
+    "/signin/",
+    "/es/",
+    "/ja/",
+    "/sw.js",
+    "/sitemap.xml",
+    "/manifest.webmanifest"
+  ],
+  "crawl_pages": [
+    "/",
+    "/issues/",
+    "/blog/"
+  ],
+  "timeout_seconds": 15,
+  "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36 AgaveAhead-safety-check",
+  "not_found_mode": "fail",
+  "not_found_marker": "This page wandered off the agave field",
+  "ssl": {
+    "warn_days": 21,
+    "fail_days": 7
+  },
+  "headers": {
+    "mode": "warn",
+    "required": [
+      "strict-transport-security",
+      "content-security-policy",
+      "x-content-type-options",
+      "referrer-policy"
+    ],
+    "frame_protection": true
+  },
+  "outbound_links": {
+    "sample_size": 25,
+    "allowlist": [
+      "ttbonline.gov",
+      "ttb.gov",
+      "agaveahead.pages.dev",
+      "agaveahead.com",
+      "challenges.cloudflare.com",
+      "responsibility.org",
+      "niaaa.nih.gov",
+      "googleapis.com",
+      "gstatic.com",
+      "kit.com",
+      "convertkit.com",
+      "kit-mail3.com",
+      "github.com",
+      "unsplash.com",
+      "pexels.com",
+      "wikimedia.org",
+      "creativecommons.org"
+    ],
+    "broken_mode": "warn",
+    "unreachable_mode": "warn",
+    "skip_regex": "^https://fonts\\.(googleapis|gstatic)\\.com/?$"
+  },
+  "content_hash": {
+    "baseline_file": "baseline.json",
+    "pages": [
+      "/",
+      "/about/",
+      "/how-it-works/",
+      "/privacy/",
+      "/terms/",
+      "/disclosure/",
+      "/subscribe/",
+      "/signin/",
+      "/sw.js"
+    ],
+    "normalize_regex": [
+      [
+        "const VERSION = \"[^\"]*\"",
+        "const VERSION = \"X\""
+      ],
+      [
+        "\\?v=[A-Za-z0-9._-]+",
+        "?v=X"
+      ],
+      [
+        "<meta name=\"generator\"[^>]*>",
+        ""
+      ],
+      [
+        "data-build=\"[^\"]*\"",
+        ""
+      ],
+      [
+        "\\b20\\d\\d-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?(Z|[+-]\\d\\d:\\d\\d)?",
+        "TS"
+      ],
+      [
+        "nonce=\"[^\"]*\"",
+        ""
+      ],
+      [
+        "<script[^>]*\\.11ty/reload-client\\.js[^>]*></script>",
+        ""
+      ]
+    ]
+  },
+  "secrets": {
+    "extra_paths": [
+      "/sw.js",
+      "/manifest.webmanifest",
+      "/robots.txt",
+      "/sitemap.xml"
+    ],
+    "patterns": {
+      "AWS access key": "AKIA[0-9A-Z]{16}",
+      "Google API key": "AIza[0-9A-Za-z_-]{35}",
+      "Stripe secret key": "(sk|rk)_live_[0-9A-Za-z]{20,}",
+      "GitHub token": "gh[pousr]_[0-9A-Za-z]{36,}",
+      "Slack token": "xox[baprs]-[0-9A-Za-z-]{10,}",
+      "Private key block": "-----BEGIN [A-Z ]*PRIVATE KEY-----",
+      "Kit/ConvertKit API secret": "(?i)(api_secret|kit_secret)[\"'\\s:=]+[0-9A-Za-z_-]{20,}",
+      "Generic secret assignment": "(?i)(secret|password|passwd|token)[\"']?\\s*[:=]\\s*[\"'][0-9A-Za-z_\\-/+]{16,}[\"']",
+      "Resend API key": "re_[0-9A-Za-z_]{20,}",
+      "Google OAuth client secret": "GOCSPX-[0-9A-Za-z_-]{20,}"
+    },
+    "allow_substrings": [
+      "AFFILIATE_TAG",
+      "KIT_FORM_ID",
+      "GOOGLE_CLIENT_ID"
+    ]
+  },
+  "must_not_serve": [
+    "/.env",
+    "/.env.local",
+    "/.dev.vars",
+    "/.git/config",
+    "/.git/HEAD",
+    "/package.json",
+    "/package-lock.json",
+    "/eleventy.config.js",
+    "/src/_data/site.json",
+    "/wrangler.toml",
+    "/node_modules/.package-lock.json",
+    "/.github/workflows/daily-publish.yml.disabled",
+    "/lib/auth/index.js",
+    "/cf/auth.js",
+    "/functions/api/auth/[[path]].js",
+    "/scripts/deploy.sh"
+  ],
+  "_notes": {
+    "ssl_hosts": "empty = site_url host; add apex + www at launch",
+    "safe_browsing_hosts": "empty = site_url host (skipped on localhost); add apex + www at launch",
+    "headers.mode": "switch to fail once src/_headers is confirmed live",
+    "not_found_mode": "fail: unknown URLs must return 404 and show the site's 404.html (marker text from src/404.njk)",
+    "site_hosts": "hosts treated as the site itself (canonical/og URLs), not outbound"
+  },
+  "must_not_serve_note": "Sponsor page is off until approved; /sponsor/ must 404 until then.",
+  "must_404": [
+    "/sponsor/"
+  ]
+}

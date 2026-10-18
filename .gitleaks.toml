@@ -1,0 +1,8 @@
+# gitleaks config for the public checker repo: scans this repo's own history (CI) and the downloaded copy of
+# the live site's published files (check.py). Default rules plus a placeholder allowlist.
+[extend]
+useDefault = true
+[allowlist]
+description = "Affiliate placeholder and pattern definitions in config.json are not secrets"
+regexes = ['''AFFILIATE_TAG''']
+paths = ['''config\.json''', '''report\.md''']

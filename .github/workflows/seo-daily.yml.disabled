@@ -1,0 +1,39 @@
+# Daily technical SEO check for Agave Ahead (shared seo-check template).
+# DISABLED until launch is approved (same method as safety-check: the .disabled suffix means GitHub doesn't load it).
+# Enable: rename to seo-daily.yml. Pre-launch the site is noindex on purpose, so EXPECT_NOINDEX=1 makes noindex a PASS
+# (and its absence a FAIL). At launch set EXPECT_NOINDEX to "0" (or repo variable) and SITE_URL to https://agaveahead.com.
+name: seo-daily
+on:
+  schedule:
+    - cron: "17 11 * * *"   # daily 11:17 UTC
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  seo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SITE_URL: ${{ vars.SITE_URL || 'https://agaveahead.pages.dev' }}
+      EXPECT_NOINDEX: ${{ vars.EXPECT_NOINDEX || '1' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run SEO check
+        run: |
+          python3 scripts/seo_check.py "$SITE_URL" --max-pages 25 --max-links 150 \
+            --json seo-report.json | tee seo-report.txt
+      - name: Job summary
+        if: always()
+        run: |
+          { echo '```'; cat seo-report.txt 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seo-report
+          path: |
+            seo-report.txt
+            seo-report.json
+          retention-days: 14
