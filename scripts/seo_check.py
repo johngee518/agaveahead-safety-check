@@ -15,7 +15,7 @@ www/apex canonical host, http->https redirect.
 
 Exit code: 0 = no FAIL, 1 = at least one FAIL, 2 = could not run.
 """
-import argparse, json, os, re, sys, ssl, gzip, time
+import argparse, html, json, os, re, sys, ssl, gzip, time
 import urllib.request, urllib.error, urllib.parse
 from html.parser import HTMLParser
 import xml.etree.ElementTree as ET
@@ -241,6 +241,23 @@ def check_ai_robots(body, rep, scope="robots.txt"):
         rep.fail(scope, "no Sitemap: line (required at launch)")
 
 
+def footer_unlinked(body, site_name=""):
+    """Footer rule: section headings and the site name in the footer must be links. Returns plain-text items found."""
+    m = re.search(r"<footer\b.*?</footer>", body, re.S | re.I)
+    if not m:
+        return []
+    ft = m.group(0)
+    out = []
+    for h in re.findall(r"<h[2-6]\b[^>]*>(.*?)</h[2-6]>", ft, re.S | re.I):
+        if "<a " not in h.lower():
+            out.append(html.unescape(re.sub(r"<[^>]+>", "", h)).strip())
+    if site_name:
+        plain = html.unescape(re.sub(r"<[^>]+>", " ", re.sub(r"<a\b.*?</a>", " ", ft, flags=re.S | re.I)))
+        if re.search(r"(?<!\w)" + re.escape(site_name) + r"(?!\w)", plain):
+            out.append(site_name)
+    return [x for x in out if x]
+
+
 def parse_sitemap(url, timeout, seen=None, depth=0):
     seen = seen if seen is not None else set()
     urls, problems = [], []
@@ -294,6 +311,8 @@ def check_page(url, base_host, rep, timeout, all_titles, all_descs, link_targets
     except Exception as e:
         rep.warn(path, f"HTML parse issue: {e}")
     info = {"url": url, "bytes": r.get("bytes", 0), "scripts": p.scripts, "styles": p.styles}
+    for item in footer_unlinked(r["body"], p.meta("og:site_name") or ""):
+        rep.fail(path, f"footer names a page/section without a link: {item!r}")
     # robots meta / header
     robots = (p.meta("robots") or "") + " " + (p.meta("googlebot") or "") + " " + str(r["headers"].get("X-Robots-Tag", ""))
     if EXPECT_NOINDEX:
