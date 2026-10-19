@@ -150,6 +150,97 @@ def ld_types(obj, out):
     return out
 
 
+# --- Structured-data required fields (Agave Ahead additions) ---------------------------------------------
+LD_REQUIRED = {
+    "Article": ("headline", "datePublished", "dateModified", "author"),
+    "BlogPosting": ("headline", "datePublished", "dateModified", "author"),
+    "NewsArticle": ("headline", "datePublished", "dateModified", "author"),
+    "FAQPage": ("mainEntity",),
+    "Question": ("name", "acceptedAnswer"),
+    "Answer": ("text",),
+    "ItemList": ("itemListElement",),
+    "BreadcrumbList": ("itemListElement",),
+    "Brand": ("name",),
+    "Organization": ("name",),
+    "WebSite": ("name", "url"),
+    "WebPage": ("name", "url"),
+    "CollectionPage": ("name", "url"),
+    "AboutPage": ("name", "url"),
+    "Product": ("name",),
+}
+
+
+def ld_missing(obj, where="", out=None):
+    """Return a list of 'Type: missing field' problems for every typed node (recursing into nested objects)."""
+    out = [] if out is None else out
+    if isinstance(obj, list):
+        for o in obj:
+            ld_missing(o, where, out)
+    elif isinstance(obj, dict):
+        ts = obj.get("@type")
+        for t in (ts if isinstance(ts, list) else [ts] if ts else []):
+            for f in LD_REQUIRED.get(str(t), ()):
+                v = obj.get(f)
+                if v in (None, "", [], {}):
+                    out.append(f"{t}: missing {f}")
+            if t == "Product" and not any(obj.get(k) for k in ("offers", "review", "aggregateRating")):
+                out.append("Product: needs offers, review or aggregateRating (do not use Product without them)")
+        for k, v in obj.items():
+            if isinstance(v, (dict, list)):
+                ld_missing(v, where, out)
+    return out
+
+
+# --- robots.txt: AI answer-engine and search crawlers that must not be blocked at launch ---------------------
+AI_CRAWLERS = ["Googlebot", "Bingbot", "Applebot", "Google-Extended", "Applebot-Extended", "GPTBot", "OAI-SearchBot",
+               "ChatGPT-User", "PerplexityBot", "Perplexity-User", "ClaudeBot", "Claude-SearchBot", "Claude-User", "CCBot",
+               "Amazonbot", "meta-externalagent", "DuckDuckBot"]
+
+
+def robots_groups(body):
+    """Parse robots.txt into {user-agent (lowercase): [(directive, value), ...]}; consecutive User-agent lines share a group."""
+    groups, cur, last_ua = {}, [], False
+    for raw in body.splitlines():
+        line = raw.split("#")[0].strip()
+        if ":" not in line:
+            continue
+        k, v = (x.strip() for x in line.split(":", 1))
+        k = k.lower()
+        if k == "user-agent":
+            if not last_ua:
+                cur = []
+            cur.append(v.lower()); groups.setdefault(v.lower(), [])
+            last_ua = True
+        elif k in ("allow", "disallow"):
+            last_ua = False
+            for ua in cur:
+                groups[ua].append((k, v))
+        else:
+            last_ua = False
+    return groups
+
+
+def robots_blocks_root(groups, ua):
+    """True if the group that applies to `ua` (its own group, else '*') disallows the whole site (Disallow: / with no Allow: /)."""
+    rules = groups.get(ua.lower(), groups.get("*", []))
+    dis = any(k == "disallow" and v == "/" for k, v in rules)
+    allow = any(k == "allow" and v == "/" for k, v in rules)
+    return dis and not allow
+
+
+def check_ai_robots(body, rep, scope="robots.txt"):
+    groups = robots_groups(body)
+    blocked = [ua for ua in AI_CRAWLERS if robots_blocks_root(groups, ua)]
+    if EXPECT_NOINDEX:
+        rep.ok(scope, f"pre-launch: {len(blocked)}/{len(AI_CRAWLERS)} search/AI crawlers blocked (expected before launch)")
+    elif blocked:
+        rep.fail(scope, "blocks search/AI crawlers at launch: " + ", ".join(blocked))
+    else:
+        rep.ok(scope, f"allows all {len(AI_CRAWLERS)} listed search/AI crawlers")
+    if not EXPECT_NOINDEX and not re.search(r"(?im)^\s*sitemap:\s*\S+", body):
+        rep.fail(scope, "no Sitemap: line (required at launch)")
+
+
 def parse_sitemap(url, timeout, seen=None, depth=0):
     seen = seen if seen is not None else set()
     urls, problems = [], []
@@ -262,11 +353,17 @@ def check_page(url, base_host, rep, timeout, all_titles, all_descs, link_targets
     info["og_image"] = img
     # JSON-LD
     types = []
+    ld_bad = 0
     for blob in p.jsonld:
         try:
-            ld_types(json.loads(blob), types)
+            obj = json.loads(blob)
         except Exception as e:
-            rep.fail(path, f"invalid JSON-LD: {e}")
+            rep.fail(path, f"invalid JSON-LD: {e}"); ld_bad += 1
+            continue
+        ld_types(obj, types)
+        for m in sorted(set(ld_missing(obj))):
+            rep.fail(path, f"JSON-LD {m}"); ld_bad += 1
+    info["jsonld_problems"] = ld_bad
     info["jsonld"] = types
     if not p.jsonld:
         rep.warn(path, "no JSON-LD structured data")
@@ -322,7 +419,13 @@ def main():
     ap.add_argument("--json", help="write full results to this JSON file")
     ap.add_argument("--warn-only", action="store_true", help="always exit 0")
     ap.add_argument("--skip-http", action="store_true", help="skip the http:// -> https:// check (port 80 blocked)")
+    ap.add_argument("--robots-file", help="offline: check a local robots.txt (e.g. the launch-only file) and exit")
     a = ap.parse_args()
+    if a.robots_file:
+        rep = Report(); check_ai_robots(open(a.robots_file, encoding="utf-8").read(), rep, scope=a.robots_file)
+        for lvl, sc, m in rep.items if hasattr(rep, "items") else []:
+            print(f"  [{lvl}] {sc}: {m}")
+        return 1 if any(x[0] == "FAIL" for x in getattr(rep, "items", [])) else 0
 
     base = a.base.rstrip("/")
     if not base.startswith("http"):
@@ -382,7 +485,18 @@ def main():
         if blocks:
             rep.ok("robots.txt", "disallows: " + ", ".join(blocks))
         if not sitemaps:
-            rep.warn("robots.txt", "no Sitemap: line")
+            (rep.ok if EXPECT_NOINDEX else rep.warn)("robots.txt", "no Sitemap: line" + (" (expected while Disallow: / is in place)" if EXPECT_NOINDEX else ""))
+        check_ai_robots(body, rep)
+    # llms.txt (plain-text site summary for AI answer engines)
+    lt = fetch(f"https://{host}/llms.txt", a.timeout)
+    if lt["status"] != 200:
+        rep.fail("llms.txt", f"returned {lt['status'] or lt['error']}")
+    elif not lt["body"].lstrip().startswith("# "):
+        rep.fail("llms.txt", "does not start with a '# Title' line")
+    elif "text/html" in str(lt["headers"].get("Content-Type", "")).lower():
+        rep.fail("llms.txt", "served as HTML (expected text/plain)")
+    else:
+        rep.ok("llms.txt", f"present ({len(lt['body'])} chars, {len(re.findall(r'\]\(https?://', lt['body']))} links)")
     if not sitemaps:
         sitemaps = [f"https://{host}/sitemap.xml"]
     urls, probs = [], []
