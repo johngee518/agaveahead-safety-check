@@ -1,6 +1,6 @@
 # Agave Ahead safety check
 
-Repo: **johngee518/agaveahead-safety-check** (public; check scripts and config only, no site code, no secrets). Workflow stays `.disabled` until launch.
+Repo: **johngee518/agaveahead-safety-check** (public; check scripts and config only, no site code, no secrets). Hourly safety-check workflow is **enabled** (launch 2026-11-02). SEO daily stays `.disabled` until separately approved.
 Agave-specific: `/sponsor/` must return 404 while sponsorships are off (`must_404`); no Amazon domains on the allowlist; TTB registry links allowlisted.
 
 Automated, $0 external safety check for the Agave Ahead site. Python standard library only, **no secrets, no site code**.

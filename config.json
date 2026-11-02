@@ -1,14 +1,20 @@
 {
   "_comment": "All settings for the public checker repo. No secrets live here. SITE_URL env var overrides site_url (e.g. local preview).",
   "site_name": "Agave Ahead",
-  "site_url": "https://agaveahead.pages.dev",
+  "site_url": "https://agaveahead.com",
   "site_hosts": [
     "agaveahead.pages.dev",
     "agaveahead.com",
     "www.agaveahead.com"
   ],
-  "ssl_hosts": [],
-  "safe_browsing_hosts": [],
+  "ssl_hosts": [
+    "agaveahead.com",
+    "www.agaveahead.com"
+  ],
+  "safe_browsing_hosts": [
+    "agaveahead.com",
+    "www.agaveahead.com"
+  ],
   "key_pages": [
     "/",
     "/issues/",
@@ -41,7 +47,7 @@
     "fail_days": 7
   },
   "headers": {
-    "mode": "warn",
+    "mode": "fail",
     "required": [
       "strict-transport-security",
       "content-security-policy",
@@ -69,7 +75,13 @@
       "unsplash.com",
       "pexels.com",
       "wikimedia.org",
-      "creativecommons.org"
+      "creativecommons.org",
+      "amazon.com",
+      "schema.org",
+      "cloudflareinsights.com",
+      "crt.org.mx",
+      "dof.gob.mx",
+      "ecfr.gov"
     ],
     "broken_mode": "warn",
     "unreachable_mode": "warn",
@@ -78,7 +90,6 @@
   "content_hash": {
     "baseline_file": "baseline.json",
     "pages": [
-      "/",
       "/about/",
       "/how-it-works/",
       "/privacy/",
@@ -116,6 +127,18 @@
       [
         "<script[^>]*\\.11ty/reload-client\\.js[^>]*></script>",
         ""
+      ],
+      [
+        "/cdn-cgi/l/email-protection#[a-f0-9]+",
+        "/cdn-cgi/l/email-protection#X"
+      ],
+      [
+        "data-cfemail=\"[a-f0-9]+\"",
+        "data-cfemail=\"X\""
+      ],
+      [
+        "\\[email&#160;protected\\]",
+        "[email]"
       ]
     ]
   },
@@ -163,14 +186,13 @@
     "/scripts/deploy.sh"
   ],
   "_notes": {
-    "ssl_hosts": "empty = site_url host; add apex + www at launch",
-    "safe_browsing_hosts": "empty = site_url host (skipped on localhost); add apex + www at launch",
-    "headers.mode": "switch to fail once src/_headers is confirmed live",
+    "ssl_hosts": "apex + www (launch)",
+    "safe_browsing_hosts": "apex + www (launch)",
+    "headers.mode": "fail: _headers confirmed live on agaveahead.com",
     "not_found_mode": "fail: unknown URLs must return 404 and show the site's 404.html (marker text from src/404.njk)",
-    "site_hosts": "hosts treated as the site itself (canonical/og URLs), not outbound"
+    "site_hosts": "hosts treated as the site itself (canonical/og URLs), not outbound",
+    "must_404": "empty: /sponsor/ intentionally 301s to /about/ while sponsorships are off"
   },
-  "must_not_serve_note": "Sponsor page is off until approved; /sponsor/ must 404 until then.",
-  "must_404": [
-    "/sponsor/"
-  ]
+  "must_not_serve_note": "Sponsors stay off: /sponsor/ 301-redirects to /about/ via src/_redirects (not served as its own page).",
+  "must_404": []
 }

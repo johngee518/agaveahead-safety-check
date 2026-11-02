@@ -1,6 +1,6 @@
 name: Agave Ahead safety check
-# DISABLED until launch is approved. Enable: rename to safety-check.yml in the site's own PUBLIC checker repo.
 # Public repo => GitHub Actions minutes are free and unlimited, so hourly is $0. No secrets needed.
+# Enabled at launch (2026-11-02).
 # Hourly quick run at :17; the 13:17 UTC run (~8:17 AM Central) is the daily full run (every sitemap page + every outbound link).
 on:
   schedule:

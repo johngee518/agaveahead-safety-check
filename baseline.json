@@ -1,0 +1,14 @@
+{
+  "generated": "2026-11-02T15:29:47Z",
+  "site_url": "https://agaveahead.com",
+  "pages": {
+    "/about/": "7b72a0a6413cfb604fda91f8cabbf79490f21edbc53affd50ff22bff1a594590",
+    "/how-it-works/": "74d1b5cc70c7d738ebf9208ad6561a1c4d7343adc57318e45dd8708666360fa6",
+    "/privacy/": "93a2c45c44e6f0dcfe3ef9e78711b0c4c5103ac2c38d98b7895c4eff1490a5f8",
+    "/terms/": "287a56d74f4a5175c3d36cafda1e03154b6e34699e31c1e6550bfc50a3c3d6ca",
+    "/disclosure/": "52fffe50aebaf71520fdb955bb68f7c1e91a19a4eaaa507b1bddaa47d1e43af9",
+    "/subscribe/": "444da59d524c2885830a7821b4f792e49b2e395d499f9f61af03aba346a61416",
+    "/signin/": "35b0756b3c13bc69c47305e0ae587a7f6b4b016e60955a298e61ea4a2d0ef203",
+    "/sw.js": "59b202b2928910b39fe75c3af921261778be3cee0b53b6885df53711c7ca23c0"
+  }
+}
