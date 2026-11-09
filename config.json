@@ -139,6 +139,14 @@
       [
         "\\[email&#160;protected\\]",
         "[email]"
+      ],
+      [
+        "__CF\\$cv\\$params=\\{r:'[^']*',t:'[^']*'\\}",
+        "__CF$cv$params=X"
+      ],
+      [
+        "ray=[a-f0-9]{12,}",
+        "ray=X"
       ]
     ]
   },
@@ -164,7 +172,8 @@
     "allow_substrings": [
       "AFFILIATE_TAG",
       "KIT_FORM_ID",
-      "GOOGLE_CLIENT_ID"
+      "GOOGLE_CLIENT_ID",
+      "1ea1dfb14de94a3aa89a64873f83e16f"
     ]
   },
   "must_not_serve": [
@@ -191,7 +200,8 @@
     "headers.mode": "fail: _headers confirmed live on agaveahead.com",
     "not_found_mode": "fail: unknown URLs must return 404 and show the site's 404.html (marker text from src/404.njk)",
     "site_hosts": "hosts treated as the site itself (canonical/og URLs), not outbound",
-    "must_404": "empty: /sponsor/ intentionally 301s to /about/ while sponsorships are off"
+    "must_404": "empty: /sponsor/ intentionally 301s to /about/ while sponsorships are off",
+    "allow_substrings_cf_beacon": "1ea1dfb1…e16f is the public Cloudflare Web Analytics site token that Pages injects into every page's beacon (data-cf-beacon). It is not a secret; it tripped the 'Generic secret assignment' pattern from Nov 6."
   },
   "must_not_serve_note": "Sponsors stay off: /sponsor/ 301-redirects to /about/ via src/_redirects (not served as its own page).",
   "must_404": []

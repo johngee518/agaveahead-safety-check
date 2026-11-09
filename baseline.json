@@ -1,14 +1,14 @@
 {
-  "generated": "2026-11-02T15:29:47Z",
+  "generated": "2026-11-09T23:31:05Z",
   "site_url": "https://agaveahead.com",
   "pages": {
-    "/about/": "7b72a0a6413cfb604fda91f8cabbf79490f21edbc53affd50ff22bff1a594590",
-    "/how-it-works/": "74d1b5cc70c7d738ebf9208ad6561a1c4d7343adc57318e45dd8708666360fa6",
-    "/privacy/": "93a2c45c44e6f0dcfe3ef9e78711b0c4c5103ac2c38d98b7895c4eff1490a5f8",
-    "/terms/": "287a56d74f4a5175c3d36cafda1e03154b6e34699e31c1e6550bfc50a3c3d6ca",
-    "/disclosure/": "52fffe50aebaf71520fdb955bb68f7c1e91a19a4eaaa507b1bddaa47d1e43af9",
-    "/subscribe/": "444da59d524c2885830a7821b4f792e49b2e395d499f9f61af03aba346a61416",
-    "/signin/": "35b0756b3c13bc69c47305e0ae587a7f6b4b016e60955a298e61ea4a2d0ef203",
+    "/about/": "2b8272c455834d793651c373c2ec02687730cafd1aed5ec6ab689bf246dd854f",
+    "/how-it-works/": "1524c917aa341218c45abd1450902ce0cdae3904862b1ef207d9199562d2ecc2",
+    "/privacy/": "aeb4bd9cebc099fe4b343fa9f21c6ae365bbe707d69ab6753d3e5181c866f08d",
+    "/terms/": "929e6e40500553e215c762720cbea671c3a82beb9ba363b0edc1bde632427053",
+    "/disclosure/": "d0d52ade16340b04d7b8aa1ab8430e6be9bb35d1e11f14b3095e67ebc735fb1d",
+    "/subscribe/": "30483d6936fe4d1b03bbd790e577aa80ef697a27fe72ea4352857e63ba12613f",
+    "/signin/": "c62659e2149ce66edcd41024da75c61cc217a0ed8179a12d2e43d4c2217ab2ba",
     "/sw.js": "59b202b2928910b39fe75c3af921261778be3cee0b53b6885df53711c7ca23c0"
   }
 }
