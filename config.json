@@ -81,7 +81,14 @@
       "cloudflareinsights.com",
       "crt.org.mx",
       "dof.gob.mx",
-      "ecfr.gov"
+      "ecfr.gov",
+      "crtequila.blogspot.com",
+      "riedel.com",
+      "riedelmexico.com.mx",
+      "revistaquixe.com",
+      "mezcalpro.com",
+      "fda.gov",
+      "canada.ca"
     ],
     "broken_mode": "warn",
     "unreachable_mode": "warn",
@@ -201,7 +208,7 @@
     "not_found_mode": "fail: unknown URLs must return 404 and show the site's 404.html (marker text from src/404.njk)",
     "site_hosts": "hosts treated as the site itself (canonical/og URLs), not outbound",
     "must_404": "empty: /sponsor/ intentionally 301s to /about/ while sponsorships are off",
-    "allow_substrings_cf_beacon": "1ea1dfb1…e16f is the public Cloudflare Web Analytics site token that Pages injects into every page's beacon (data-cf-beacon). It is not a secret; it tripped the 'Generic secret assignment' pattern from Nov 6."
+    "allow_substrings_cf_beacon": "1ea1dfb1\u2026e16f is the public Cloudflare Web Analytics site token that Pages injects into every page's beacon (data-cf-beacon). It is not a secret; it tripped the 'Generic secret assignment' pattern from Nov 6."
   },
   "must_not_serve_note": "Sponsors stay off: /sponsor/ 301-redirects to /about/ via src/_redirects (not served as its own page).",
   "must_404": []
